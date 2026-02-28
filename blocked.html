@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akses Ujian Ditutup</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI', Arial, sans-serif;
+  background:linear-gradient(135deg,#8b0000,#b22222);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+.card{
+  background:white;
+  width:100%;
+  max-width:600px;
+  border-radius:14px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.3);
+  padding:30px;
+}
+
+.header{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.header h2{
+  margin:0;
+  color:#b22222;
+}
+
+.summary{
+  background:#fff5f5;
+  padding:15px;
+  border-radius:8px;
+  margin-bottom:20px;
+  font-weight:500;
+}
+
+.logBox{
+  max-height:300px;
+  overflow:auto;
+}
+
+.logItem{
+  background:#fafafa;
+  border-left:4px solid #b22222;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:6px;
+  font-size:14px;
+}
+
+.footer{
+  margin-top:20px;
+  font-size:13px;
+  color:#666;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h2>🚫 Akses Ujian Ditutup</h2>
+    <p>Sistem mendeteksi pelanggaran melebihi batas.</p>
+  </div>
+
+  <div class="summary" id="summaryBox"></div>
+
+  <div class="logBox" id="logContainer"></div>
+
+  <div class="footer">
+    Silakan hubungi pengawas ujian.
+  </div>
+</div>
+
+<script>
+
+// Ambil parameter mapel dari URL
+const urlParams = new URLSearchParams(window.location.search);
+const subjectKey = urlParams.get("mapel");
+
+const container = document.getElementById("logContainer");
+const summaryBox = document.getElementById("summaryBox");
+
+if(!subjectKey){
+  summaryBox.innerHTML = "Mapel tidak terdeteksi.";
+}else{
+
+  let logData = JSON.parse(localStorage.getItem(subjectKey+"_log") || "[]");
+  let violation = localStorage.getItem(subjectKey+"_v") || 0;
+
+  summaryBox.innerHTML = `
+    Mapel: <strong>${subjectKey}</strong><br>
+    Total Pelanggaran: <strong>${violation}</strong><br>
+    Batas Maksimal: <strong>3</strong>
+  `;
+
+  if(logData.length === 0){
+    container.innerHTML = "<p>Tidak ada data aktivitas yang tercatat.</p>";
+  }else{
+
+    logData.forEach((item, index)=>{
+      container.innerHTML += `
+        <div class="logItem">
+          <strong>Pelanggaran ${index+1}</strong><br>
+          🕒 Waktu: ${item.time}<br>
+          📌 Alasan: ${item.reason}<br>
+          ⏳ Durasi: ${item.duration ? item.duration + " detik" : "-"}
+        </div>
+      `;
+    });
+
+  }
+}
+
+</script>
+
+</body>
+</html>

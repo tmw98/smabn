@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iWrapper Ujian</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI', Arial, sans-serif;
+  background:linear-gradient(135deg,#1e3c72,#2a5298);
+}
+
+/* CARD STYLE */
+.card{
+  background:white;
+  width:100%;
+  max-width:500px;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  text-align:center;
+}
+
+.overlay{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  z-index:9999;
+}
+
+.warning-bg{
+  background:rgba(0,0,0,0.6);
+}
+
+iframe{
+  width:100%;
+  height:100vh;
+  border:none;
+}
+
+h2{
+  margin-top:0;
+  color:#1e3c72;
+}
+
+.checklist{
+  text-align:left;
+  margin-top:15px;
+}
+
+.checklist label{
+  display:block;
+  margin-bottom:12px;
+  font-size:14px;
+}
+
+.info-box{
+  background:#f0f4ff;
+  padding:12px;
+  border-radius:8px;
+  font-size:14px;
+  margin-top:15px;
+  text-align:left;
+}
+
+button{
+  padding:12px 25px;
+  margin-top:20px;
+  font-size:15px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#1e3c72;
+  color:white;
+  transition:0.3s;
+}
+
+button:disabled{
+  background:#999;
+  cursor:not-allowed;
+}
+
+button:hover:not(:disabled){
+  background:#16325c;
+}
+
+.warning-card{
+  background:#fff3f3;
+  border-left:5px solid red;
+}
+</style>
+</head>
+<body>
+
+<!-- PERSIAPAN -->
+<div id="prepOverlay" class="overlay">
+  <div class="card">
+    <h2>Persiapan Sebelum Ujian</h2>
+
+    <div class="info-box">
+      Mohon pastikan Anda sudah menerima <strong>username dan password</strong> dari sekolah.<br><br>
+      <strong>Jangan klik "Mulai Ujian"</strong> apabila belum menerima username dan password, karena berpotensi menyebabkan akses terblokir.
+    </div>
+
+    <div class="checklist">
+      <p>Checklist Persiapan:</p>
+      <label><input type="checkbox" class="prepCheck"> Matikan notifikasi WhatsApp, dll</label>
+      <label><input type="checkbox" class="prepCheck"> Aktifkan Mode Jangan Ganggu</label>
+      <label><input type="checkbox" class="prepCheck"> Atur durasi layar 30 menit atau lebih</label>
+      <label><input type="checkbox" class="prepCheck"> Matikan rotasi layar</label>
+      <label><input type="checkbox" class="prepCheck"> Jangan menerima telepon, kecuali sangat penting</label>
+    </div>
+
+    <button id="startBtn" disabled>Mulai Ujian</button>
+  </div>
+</div>
+
+<!-- WARNING -->
+<div id="warningOverlay" class="overlay warning-bg" style="display:none;">
+  <div class="card warning-card">
+    <h3>Peringatan Sistem</h3>
+    <p id="warningText"></p>
+    <p>Sisa kesempatan: <strong><span id="chanceLeft"></span></strong></p>
+    <button onclick="closeWarning()">Lanjutkan</button>
+  </div>
+</div>
+
+<iframe id="examFrame"></iframe>
+
+<script>
+/* ================= CONFIG ================= */
+
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCCPT-CVqu2Cx2etJSTACSR8tRoz8pCvVQ8_11oqMTZJPUDw/viewform?usp=publish-editor";
+const SUBJECT_CODE = "PPANCASILA10";
+const MAX_VIOLATION = 3;
+
+/* ================= STATE ================= */
+
+let violation = parseInt(localStorage.getItem(SUBJECT_CODE+"_v") || "0");
+let logData = JSON.parse(localStorage.getItem(SUBJECT_CODE+"_log") || "[]");
+let started = false;
+let leaveTime = null;
+let graceUsed = false;
+let initialWidth = null;
+
+/* ================= CHECKLIST ================= */
+
+const checks = document.querySelectorAll(".prepCheck");
+const startBtn = document.getElementById("startBtn");
+
+checks.forEach(c=>{
+  c.addEventListener("change", ()=>{
+    startBtn.disabled = ![...checks].every(x=>x.checked);
+  });
+});
+
+/* ================= LOG SYSTEM ================= */
+
+function addLog(reason, duration=0){
+  const now = new Date();
+  logData.push({
+    time: now.toLocaleString(),
+    reason: reason,
+    duration: duration,
+    total: violation
+  });
+
+  if(logData.length > 50){
+    logData.shift();
+  }
+
+  localStorage.setItem(SUBJECT_CODE+"_log", JSON.stringify(logData));
+}
+
+/* ================= SAVE VIOLATION ================= */
+
+function saveViolation(){
+
+  localStorage.setItem(SUBJECT_CODE+"_v", violation);
+
+  if(violation >= MAX_VIOLATION){
+
+    localStorage.setItem(SUBJECT_CODE+"_blocked","1");
+
+    window.location.href = 
+      "blocked.html?mapel=" + encodeURIComponent(SUBJECT_CODE);
+  }
+}
+/* ================= WARNING ================= */
+
+function showWarning(msg){
+  document.getElementById("warningText").innerText = msg;
+  document.getElementById("chanceLeft").innerText = MAX_VIOLATION - violation;
+  document.getElementById("warningOverlay").style.display="flex";
+}
+
+function triggerViolation(reason, duration=0){
+  violation++;
+  addLog(reason, duration);
+  saveViolation();
+
+  if(violation < MAX_VIOLATION){
+    showWarning(reason);
+  }
+}
+
+function closeWarning(){
+  document.getElementById("warningOverlay").style.display="none";
+}
+
+/* ================= START ================= */
+
+startBtn.onclick = function(){
+  document.getElementById("prepOverlay").style.display="none";
+  document.getElementById("examFrame").src = FORM_URL;
+  started = true;
+  localStorage.setItem(SUBJECT_CODE+"_started","1");
+  initialWidth = window.innerWidth;
+};
+
+/* ================= RELOAD SAFE ================= */
+
+if(localStorage.getItem(SUBJECT_CODE+"_started")==="1" &&
+   localStorage.getItem(SUBJECT_CODE+"_blocked")!=="1"){
+  document.getElementById("prepOverlay").style.display="none";
+  document.getElementById("examFrame").src = FORM_URL;
+  started = true;
+  initialWidth = window.innerWidth;
+}
+
+/* ================= TAB SWITCH DETECTION ================= */
+
+document.addEventListener("visibilitychange", function(){
+
+  if(!started) return;
+
+  if(document.hidden){
+    leaveTime = Date.now();
+  } else if(leaveTime){
+
+    let diff = (Date.now() - leaveTime)/1000;
+
+    if(!graceUsed && diff < 4){
+      graceUsed = true;
+      leaveTime=null;
+      return;
+    }
+
+    if(diff > 7){
+      triggerViolation("Keluar dari halaman selama "+Math.round(diff)+" detik", Math.round(diff));
+    }
+
+    leaveTime=null;
+  }
+});
+
+/* ================= SPLIT SCREEN ================= */
+
+window.addEventListener("resize", function(){
+
+  if(!started) return;
+
+  // toleransi perubahan lebar 200px
+  if(Math.abs(window.innerWidth - initialWidth) > 200){
+    triggerViolation("Terdeteksi kemungkinan split screen");
+  }
+
+});
+/* ================= RIGHT CLICK DISABLE ================= */
+
+document.addEventListener("contextmenu", e=>e.preventDefault());
+
+/* ================= BLOCK CHECK ================= */
+
+
+if(localStorage.getItem(SUBJECT_CODE+"_blocked")==="1"){
+  window.location.href =
+    "blocked.html?mapel=" + encodeURIComponent(SUBJECT_CODE);
+}
+</script>
+
+</body>
+</html>
